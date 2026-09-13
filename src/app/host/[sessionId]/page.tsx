@@ -744,7 +744,7 @@ export default function HostSessionPage() {
       </main>
 
       {/* Host Footer Action Toolbar */}
-      <footer style={{ padding: "1rem 1.5rem", borderTop: "var(--border-default)", background: "var(--color-surface)", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+      <footer style={{ padding: "1rem 1.5rem", borderTop: "var(--border-default)", background: "var(--color-surface)", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.8rem" }}>
         <StatChip value={participants.length} label="Total Audience" />
         <div style={{ display: "flex", gap: "0.8rem" }}>
           {phase === 'preview' && (

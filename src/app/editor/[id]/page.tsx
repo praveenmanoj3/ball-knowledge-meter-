@@ -638,7 +638,7 @@ export default function EditorPage() {
       </header>
 
       {/* 3-column layout */}
-      <div style={{ display: "grid", gridTemplateColumns: "220px 1fr 260px", overflow: "hidden" }}>
+      <div className="editor-grid" style={{ display: "grid", gridTemplateColumns: "220px 1fr 260px", overflow: "hidden" }}>
 
         {/* ── Left: Slide panel ── */}
         <aside style={{ borderRight: "var(--border-default)", background: "var(--color-surface-muted)", display: "flex", flexDirection: "column", overflow: "hidden" }}>
@@ -706,7 +706,7 @@ export default function EditorPage() {
             <label style={{ display: "block", fontSize: "0.72rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.08em", color: "var(--color-text-muted)", marginBottom: "0.6rem" }}>
               Answer Options — click ✓ to mark correct
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.8rem" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 200px), 1fr))", gap: "0.8rem" }}>
               {(activeSlide.options || []).map((opt, i) => {
                 const isCorrect = opt.is_correct;
                 return (

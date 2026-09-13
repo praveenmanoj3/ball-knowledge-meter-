@@ -370,7 +370,7 @@ export default function PlaySessionPage() {
         </div>
 
         {/* Preview Banner or Options */}
-        {session.status === 'preview' ? (
+        {session.status === "preview" ? (
           <div
             className="pin-card animate-scale-in"
             style={{
@@ -393,50 +393,86 @@ export default function PlaySessionPage() {
               Read the question & watch the media. Options will unlock in a few seconds…
             </p>
           </div>
-        ) : !isSubmitted ? (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0.8rem", flex: 1 }}>
-            {(currentSlide.options || []).map((opt, i) => (
-              <button
-                key={opt.id || i}
-                className="answer-option"
-                onClick={() => handleSelectAnswer(opt.id)}
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "0.9rem", flex: 1 }}>
+            {/* Status indicator when answer is locked in */}
+            {isSubmitted && (
+              <div
+                className="pin-card animate-scale-in"
                 style={{
-                  background: OPTION_COLORS[i % OPTION_COLORS.length],
-                  minHeight: "64px",
-                  fontSize: "1.1rem",
-                  fontWeight: 700,
+                  padding: "0.75rem 1rem",
+                  textAlign: "center",
+                  background: "var(--color-brand-yellow)",
                   display: "flex",
                   alignItems: "center",
-                  padding: "1rem",
+                  justifyContent: "center",
+                  gap: "0.5rem",
+                  boxShadow: "var(--shadow-sm)",
                 }}
               >
-                <span className="answer-key" style={{ marginRight: "0.75rem" }}>
-                  {OPTION_LABELS[i]}
+                <CheckCircle size={18} color="var(--color-text-strong)" />
+                <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--color-text-strong)" }}>
+                  Answer locked in! Waiting for host to reveal…
                 </span>
-                {opt.text}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div
-            className="pin-card animate-scale-in"
-            style={{
-              padding: "2.5rem 1.5rem",
-              textAlign: "center",
-              background: "var(--color-brand-blue)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              gap: "1rem",
-            }}
-          >
-            <CheckCircle size={48} color="var(--color-text-strong)" />
-            <h2 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: "1.8rem" }}>
-              ANSWER LOCKED IN!
-            </h2>
-            <p style={{ margin: 0, fontWeight: 700, color: "var(--color-text-muted)" }}>
-              Waiting for the host to reveal the results…
-            </p>
+              </div>
+            )}
+
+            {/* Answer Options Grid */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: "0.75rem" }}>
+              {(currentSlide.options || []).map((opt, i) => {
+                const isThisSelected = opt.id === selectedOptionId;
+                const isAnySelected = isSubmitted && selectedOptionId !== null;
+
+                // Base style: if submitted, unselected choices turn BLACK & WHITE
+                let optionClassName = "answer-option";
+                if (isAnySelected) {
+                  optionClassName += isThisSelected
+                    ? " answer-option--selected-active"
+                    : " answer-option--unselected-bw";
+                }
+
+                return (
+                  <button
+                    key={opt.id || i}
+                    className={optionClassName}
+                    disabled={isSubmitted}
+                    onClick={() => handleSelectAnswer(opt.id)}
+                    style={{
+                      background: isAnySelected && !isThisSelected
+                        ? undefined // CSS class applies black-and-white grayscale
+                        : OPTION_COLORS[i % OPTION_COLORS.length],
+                      minHeight: "60px",
+                      justifyContent: "space-between",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flex: 1 }}>
+                      <span className="answer-key">
+                        {OPTION_LABELS[i]}
+                      </span>
+                      <span style={{ wordBreak: "break-word" }}>{opt.text}</span>
+                    </div>
+
+                    {/* Selected badge */}
+                    {isThisSelected && (
+                      <span
+                        style={{
+                          background: "#000",
+                          color: "#fff",
+                          fontSize: "0.72rem",
+                          fontWeight: 800,
+                          padding: "0.25rem 0.6rem",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                          flexShrink: 0,
+                        }}
+                      >
+                        ✓ Selected
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
       </main>

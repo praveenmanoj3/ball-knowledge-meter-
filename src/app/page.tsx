@@ -270,11 +270,11 @@ export default function DashboardPage() {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
+    <div className="app-layout" style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar active="Dashboard" />
 
       {/* Main content */}
-      <main style={{ flex: 1, padding: "2rem 2.5rem 4rem", overflowY: "auto" }}>
+      <main className="main-content" style={{ flex: 1, padding: "2rem 2.5rem 4rem", overflowY: "auto" }}>
         {/* Page header */}
         <div
           style={{
