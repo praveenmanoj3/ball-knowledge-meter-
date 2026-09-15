@@ -67,7 +67,7 @@ a { color: inherit; text-decoration: none; }
 
 /* ─── Shared Component Styles ────────────────────────── */
 
-/* Pin card accent */
+/* Tape card accent */
 .pin-card {
   position: relative;
   border: var(--border-default);
@@ -78,15 +78,16 @@ a { color: inherit; text-decoration: none; }
 .pin-card::before {
   content: '';
   position: absolute;
-  top: -13px;
+  top: -9px;
   left: 50%;
-  width: 24px;
-  height: 24px;
-  border: 3px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-pin-red);
-  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.2) inset;
-  transform: translateX(-50%);
+  width: 58px;
+  height: 16px;
+  border: 2px solid rgba(93, 78, 63, 0.55);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.18) 0 3px, transparent 3px 8px),
+    rgba(244, 211, 157, 0.92);
+  box-shadow: 1px 2px 0 rgba(55, 65, 81, 0.3);
+  transform: translateX(-50%) rotate(-3deg);
   z-index: 10;
 }
 
