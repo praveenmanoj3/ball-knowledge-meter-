@@ -52,7 +52,7 @@ export default function LeaderboardPage() {
           padding: "0.75rem 1.5rem",
           borderBottom: "var(--border-default)",
           background: "var(--color-surface)",
-          boxShadow: "0 3px 0 0 rgba(0,0,0,0.12)",
+          boxShadow: "0 3px 0 0 var(--color-shadow)",
           flexWrap: "wrap",
         }}
       >

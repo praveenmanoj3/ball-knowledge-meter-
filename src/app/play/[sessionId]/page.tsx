@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { CheckCircle, Clock, Zap, Trophy, Loader2, Eye, Lock } from "lucide-react";
 import { supabase } from "@/lib/supabase";
@@ -25,6 +25,7 @@ export default function PlaySessionPage() {
   const [slides, setSlides] = useState<Slide[]>([]);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [participantId, setParticipantId] = useState<string | null>(null);
+  const [participantReady, setParticipantReady] = useState(false);
   const [nickname, setNickname] = useState<string>("Player");
   const [avatar, setAvatar] = useState<string>("⚽");
 
@@ -32,6 +33,8 @@ export default function PlaySessionPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [earnedPoints, setEarnedPoints] = useState(0);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState<boolean | null>(null);
+  const submittingAnswerRef = useRef(false);
+  const sessionRef = useRef<Session | null>(null);
 
   // Restore player session storage
   useEffect(() => {
@@ -42,6 +45,7 @@ export default function PlaySessionPage() {
     if (pId) setParticipantId(pId);
     if (nick) setNickname(nick);
     if (av) setAvatar(av);
+    setParticipantReady(true);
   }, []);
 
   // Fetch initial session state
@@ -50,6 +54,7 @@ export default function PlaySessionPage() {
       const data = await getSession(sessionId);
       if (data) {
         setSession(data.session);
+        sessionRef.current = data.session;
         setSlides(data.slides);
         setParticipants(data.participants);
       }
@@ -69,14 +74,19 @@ export default function PlaySessionPage() {
         { event: "UPDATE", schema: "public", table: "sessions", filter: `id=eq.${sessionId}` },
         (payload) => {
           const updatedSession = payload.new as Session;
+          const previousSession = sessionRef.current;
+          const isNewSlide = previousSession?.current_slide_index !== updatedSession.current_slide_index;
+          const isNewLivePhase = previousSession?.status !== "live" && updatedSession.status === "live";
+          sessionRef.current = updatedSession;
           setSession(updatedSession);
 
-          // Reset question state when moving to a new slide
-          if (updatedSession.status === "live") {
+          // Reset only when a new question becomes live, not on unrelated session writes.
+          if (updatedSession.status === "live" && (isNewSlide || isNewLivePhase)) {
             setSelectedOptionId(null);
             setIsSubmitted(false);
             setEarnedPoints(0);
             setIsCorrectAnswer(null);
+            submittingAnswerRef.current = false;
           }
         }
       )
@@ -114,7 +124,9 @@ export default function PlaySessionPage() {
   }, [sessionId, session?.current_slide_index, currentSlide?.id]);
 
   const handleSelectAnswer = async (optionId: string) => {
-    if (isSubmitted || !session || !currentSlide || !participantId) return;
+    if (!participantReady || isSubmitted || submittingAnswerRef.current || session?.status !== "live" || !session || !currentSlide || !participantId) return;
+
+    submittingAnswerRef.current = true;
 
     setSelectedOptionId(optionId);
     setIsSubmitted(true);
@@ -139,7 +151,7 @@ export default function PlaySessionPage() {
     setIsCorrectAnswer(correct);
     setEarnedPoints(points);
 
-    await submitParticipantResponse(
+    const submitted = await submitParticipantResponse(
       sessionId,
       currentSlide.id,
       participantId,
@@ -148,6 +160,13 @@ export default function PlaySessionPage() {
       responseTimeMs,
       points
     );
+
+    if (!submitted) {
+      sessionStorage.removeItem(`bkm_ans_${sessionId}_${currentSlide.id}`);
+      setSelectedOptionId(null);
+      setIsSubmitted(false);
+    }
+    submittingAnswerRef.current = false;
   };
 
   if (loading) {
@@ -435,7 +454,7 @@ export default function PlaySessionPage() {
                   <button
                     key={opt.id || i}
                     className={optionClassName}
-                    disabled={isSubmitted}
+                    disabled={!participantReady || isSubmitted || !participantId || session.status !== "live"}
                     onClick={() => handleSelectAnswer(opt.id)}
                     style={{
                       background: isAnySelected && !isThisSelected

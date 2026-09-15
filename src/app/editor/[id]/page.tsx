@@ -229,7 +229,7 @@ function MediaUploadZone({
           background: "#000",
           borderRadius: 12,
           border: "2.5px solid #000",
-          boxShadow: "4px 4px 0 0 #000",
+          boxShadow: "var(--shadow-md)",
         }}
       >
         {slide.media_type === "video" ? (
@@ -289,7 +289,7 @@ function MediaUploadZone({
         cursor: "pointer",
         background: dragOver ? "rgba(251,191,36,0.12)" : "var(--color-surface)",
         border: dragOver ? "2.5px dashed var(--color-accent-amber)" : "2.5px solid #000",
-        boxShadow: "4px 4px 0 0 #000",
+        boxShadow: "var(--shadow-md)",
         borderRadius: 12,
         padding: "2.5rem 1.5rem",
         display: "flex",
@@ -333,7 +333,7 @@ function MediaUploadZone({
               style={{
                 background: "#ffffff",
                 border: "2.5px solid #000",
-                boxShadow: "3px 3px 0 0 #000",
+                boxShadow: "var(--shadow-sm)",
                 borderRadius: 8,
                 padding: "0.5rem 1.1rem",
                 fontWeight: 800,
@@ -345,8 +345,8 @@ function MediaUploadZone({
                 cursor: "pointer",
                 transition: "transform 0.1s ease, box-shadow 0.1s ease",
               }}
-              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translate(2px, 2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "1px 1px 0 0 #000"; }}
-              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "3px 3px 0 0 #000"; }}
+              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translate(2px, 2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "2px 2px 0 0 var(--color-shadow)"; }}
+              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)"; }}
             >
               <ImageIcon size={15} />
               IMAGE
@@ -358,7 +358,7 @@ function MediaUploadZone({
               style={{
                 background: "#ffffff",
                 border: "2.5px solid #000",
-                boxShadow: "3px 3px 0 0 #000",
+                boxShadow: "var(--shadow-sm)",
                 borderRadius: 8,
                 padding: "0.5rem 1.1rem",
                 fontWeight: 800,
@@ -370,8 +370,8 @@ function MediaUploadZone({
                 cursor: "pointer",
                 transition: "transform 0.1s ease, box-shadow 0.1s ease",
               }}
-              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translate(2px, 2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "1px 1px 0 0 #000"; }}
-              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "3px 3px 0 0 #000"; }}
+              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translate(2px, 2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "2px 2px 0 0 var(--color-shadow)"; }}
+              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)"; }}
             >
               <FileImage size={15} />
               GIF
@@ -383,7 +383,7 @@ function MediaUploadZone({
               style={{
                 background: "#ffffff",
                 border: "2.5px solid #000",
-                boxShadow: "3px 3px 0 0 #000",
+                boxShadow: "var(--shadow-sm)",
                 borderRadius: 8,
                 padding: "0.5rem 1.1rem",
                 fontWeight: 800,
@@ -395,8 +395,8 @@ function MediaUploadZone({
                 cursor: "pointer",
                 transition: "transform 0.1s ease, box-shadow 0.1s ease",
               }}
-              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translate(2px, 2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "1px 1px 0 0 #000"; }}
-              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "3px 3px 0 0 #000"; }}
+              onMouseDown={(e) => { (e.currentTarget as HTMLElement).style.transform = "translate(2px, 2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "2px 2px 0 0 var(--color-shadow)"; }}
+              onMouseUp={(e) => { (e.currentTarget as HTMLElement).style.transform = "none"; (e.currentTarget as HTMLElement).style.boxShadow = "var(--shadow-sm)"; }}
             >
               <Video size={15} />
               VIDEO
@@ -719,7 +719,7 @@ export default function EditorPage() {
                       alignItems: "center",
                       gap: "0.6rem",
                       borderColor: isCorrect ? "#16a34a" : undefined,
-                      boxShadow: isCorrect ? "0 4px 0 0 #15803d" : undefined,
+                      boxShadow: isCorrect ? "0 4px 0 0 var(--color-shadow)" : undefined,
                     }}
                   >
                     <span style={{ width: 28, height: 28, borderRadius: "50%", background: OPTION_COLORS[i % OPTION_COLORS.length], display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "var(--font-display)", fontSize: "0.9rem", flexShrink: 0, border: "2px solid #000" }}>

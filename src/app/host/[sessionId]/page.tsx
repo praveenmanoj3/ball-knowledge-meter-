@@ -176,6 +176,15 @@ export default function HostSessionPage() {
   const [previewTimeLeft, setPreviewTimeLeft] = useState(0);
   const [simulating, setSimulating] = useState(false);
 
+  const insertParticipantBatch = async (batch: Array<{ session_id: string; nickname: string; avatar: string; score: number }>) => {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      const { error } = await supabase.from("participants").insert(batch);
+      if (!error) return;
+      if (attempt === 3) throw error;
+      await new Promise((resolve) => setTimeout(resolve, attempt * 300));
+    }
+  };
+
   // Load initial session
   useEffect(() => {
     async function init() {
@@ -273,9 +282,10 @@ export default function HostSessionPage() {
     ];
 
     const totalToJoin = 200;
-    const batchSize = 50;
+    const batchSize = 25;
 
-    for (let i = 0; i < totalToJoin; i += batchSize) {
+    try {
+      for (let i = 0; i < totalToJoin; i += batchSize) {
       const batch = Array.from({ length: Math.min(batchSize, totalToJoin - i) }, (_, idx) => {
         const pNum = i + idx + 1;
         const randomName = names[pNum % names.length];
@@ -287,13 +297,20 @@ export default function HostSessionPage() {
         };
       });
 
-      await supabase.from("participants").insert(batch);
-      await new Promise((r) => setTimeout(r, 200));
-    }
+        await insertParticipantBatch(batch);
+      }
 
-    const updatedParticipants = await getSessionParticipants(sessionId);
-    setParticipants(updatedParticipants);
-    setSimulating(false);
+      const updatedParticipants = await getSessionParticipants(sessionId);
+      setParticipants(updatedParticipants);
+      if (updatedParticipants.length < totalToJoin) {
+        throw new Error(`Only ${updatedParticipants.length} participants are visible after the simulation.`);
+      }
+    } catch (error) {
+      console.error("Participant simulation failed:", error);
+      alert(error instanceof Error ? error.message : "Participant simulation failed. Please try again.");
+    } finally {
+      setSimulating(false);
+    }
   };
 
   const simulateBotAnswersForCurrentSlide = async () => {
@@ -498,7 +515,7 @@ export default function HostSessionPage() {
   if (phase === 'lobby') {
     return (
       <div style={{ minHeight: "100vh" }}>
-        <header style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1.5rem", borderBottom: "var(--border-default)", background: "var(--color-surface)", boxShadow: "0 3px 0 0 rgba(0,0,0,0.12)" }}>
+        <header style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1.5rem", borderBottom: "var(--border-default)", background: "var(--color-surface)", boxShadow: "0 3px 0 0 var(--color-shadow)" }}>
           <Link href="/" className="btn btn-secondary" style={{ padding: "0.55rem 0.9rem", minHeight: "unset" }}>← Dashboard</Link>
           <div className="brand"><div className="brand__mark" /><span className="brand__text">BKM</span></div>
           <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: "0.5rem" }}>
@@ -521,7 +538,7 @@ export default function HostSessionPage() {
     const sortedParticipants = [...participants].sort((a, b) => b.score - a.score);
     return (
       <div style={{ minHeight: "100vh" }}>
-        <header style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1.5rem", borderBottom: "var(--border-default)", background: "var(--color-surface)", boxShadow: "0 3px 0 0 rgba(0,0,0,0.12)", flexWrap: "wrap" }}>
+        <header style={{ display: "flex", alignItems: "center", gap: "1rem", padding: "0.75rem 1.5rem", borderBottom: "var(--border-default)", background: "var(--color-surface)", boxShadow: "0 3px 0 0 var(--color-shadow)", flexWrap: "wrap" }}>
           <div className="brand"><div className="brand__mark" /><span className="brand__text">BKM</span></div>
           <div className="session-code" style={{ fontSize: "1.5rem", padding: "0.3rem 0.8rem" }}>{session.session_code}</div>
           <div style={{ marginLeft: "auto" }}>
@@ -612,7 +629,7 @@ export default function HostSessionPage() {
           padding: "0.75rem 1.5rem",
           borderBottom: "var(--border-default)",
           background: "var(--color-surface)",
-          boxShadow: "0 3px 0 0 rgba(0,0,0,0.12)",
+          boxShadow: "0 3px 0 0 var(--color-shadow)",
           flexWrap: "wrap",
         }}
       >
@@ -638,7 +655,7 @@ export default function HostSessionPage() {
         {/* Timer and responses bar */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           {phase === 'preview' ? (
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", background: "var(--color-brand-blue)", color: "#fff", padding: "0.55rem 1.2rem", borderRadius: 10, border: "2px solid #000", boxShadow: "3px 3px 0 0 #000" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", background: "var(--color-brand-blue)", color: "#fff", padding: "0.55rem 1.2rem", borderRadius: 10, border: "2px solid #000", boxShadow: "var(--shadow-sm)" }}>
               <Eye size={20} />
               <span style={{ fontWeight: 800, fontSize: "1.05rem" }}>
                 Previewing Media & Question — Options unlock in {previewTimeLeft}s
