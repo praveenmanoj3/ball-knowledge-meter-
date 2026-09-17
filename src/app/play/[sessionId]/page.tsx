@@ -31,6 +31,7 @@ export default function PlaySessionPage() {
 
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isAnswerProcessing, setIsAnswerProcessing] = useState(false);
   const [earnedPoints, setEarnedPoints] = useState(0);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState<boolean | null>(null);
   const submittingAnswerRef = useRef(false);
@@ -159,6 +160,7 @@ export default function PlaySessionPage() {
     if (!participantReady || isSubmitted || submittingAnswerRef.current || session?.status !== "live" || !session || !currentSlide || !participantId) return;
 
     submittingAnswerRef.current = true;
+    setIsAnswerProcessing(true);
 
     setSelectedOptionId(optionId);
     setIsSubmitted(true);
@@ -193,6 +195,10 @@ export default function PlaySessionPage() {
       points
     );
 
+    if (submitted) {
+      await new Promise((resolve) => setTimeout(resolve, 900));
+    }
+
     if (!submitted) {
       const stillSameLiveQuestion = session?.status === "live" && session.current_slide_id === currentSlide.id;
       if (stillSameLiveQuestion) {
@@ -201,6 +207,8 @@ export default function PlaySessionPage() {
         setIsSubmitted(false);
       }
     }
+
+    setIsAnswerProcessing(false);
     submittingAnswerRef.current = false;
   };
 
@@ -458,7 +466,7 @@ export default function PlaySessionPage() {
                 style={{
                   padding: "0.75rem 1rem",
                   textAlign: "center",
-                  background: "var(--color-brand-yellow)",
+                  background: isAnswerProcessing ? "var(--color-surface-muted)" : "var(--color-brand-yellow)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -466,9 +474,13 @@ export default function PlaySessionPage() {
                   boxShadow: "var(--shadow-sm)",
                 }}
               >
-                <CheckCircle size={18} color="var(--color-text-strong)" />
+                {isAnswerProcessing ? (
+                  <Loader2 size={18} className="animate-spin" color="var(--color-text-strong)" />
+                ) : (
+                  <CheckCircle size={18} color="var(--color-text-strong)" />
+                )}
                 <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--color-text-strong)" }}>
-                  Answer locked in! Waiting for host to reveal…
+                  {isAnswerProcessing ? "Saving your answer…" : "Answer locked in! Waiting for host to reveal…"}
                 </span>
               </div>
             )}

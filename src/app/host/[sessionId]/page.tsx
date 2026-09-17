@@ -260,8 +260,9 @@ export default function HostSessionPage() {
     const timer = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          // Auto reveal when time expires
-          handleRevealAnswer();
+          window.setTimeout(() => {
+            handleRevealAnswer();
+          }, 1000);
           return 0;
         }
         return prev - 1;
