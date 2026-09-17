@@ -400,20 +400,6 @@ export async function submitParticipantResponse(
     }]);
 
   if (error) {
-    if (error.code === '23505') {
-      const { data: existingResponse } = await supabase
-        .from('responses')
-        .select('id')
-        .eq('session_id', sessionId)
-        .eq('slide_id', slideId)
-        .eq('participant_id', participantId)
-        .maybeSingle();
-
-      if (existingResponse) {
-        return true;
-      }
-    }
-
     console.error('Error submitting response:', error);
     return false;
   }
