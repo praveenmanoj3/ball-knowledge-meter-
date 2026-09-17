@@ -206,6 +206,11 @@ export default function PlaySessionPage() {
       // visible flicker users see when they answer in the last few seconds.
       console.warn("Response submission failed; keeping local answer selection so the last-second click does not disappear.");
       sessionStorage.setItem(`bkm_ans_${sessionId}_${currentSlide.id}`, optionId);
+    } else {
+      const refreshed = await getSession(sessionId);
+      if (refreshed) {
+        setParticipants(refreshed.participants);
+      }
     }
     submittingAnswerRef.current = false;
   };

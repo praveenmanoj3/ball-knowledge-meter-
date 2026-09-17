@@ -212,6 +212,11 @@ export default function HostSessionPage() {
   useEffect(() => {
     if (!sessionId) return;
 
+    const refreshParticipants = async () => {
+      const updatedParticipants = await getSessionParticipants(sessionId);
+      setParticipants(updatedParticipants);
+    };
+
     const channel = supabase
       .channel(`session-${sessionId}`)
       .on(
@@ -222,6 +227,13 @@ export default function HostSessionPage() {
             if (prev.some((p) => p.id === payload.new.id)) return prev;
             return [...prev, payload.new as Participant];
           });
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'participants', filter: `session_id=eq.${sessionId}` },
+        async () => {
+          await refreshParticipants();
         }
       )
       .on(
@@ -454,7 +466,11 @@ export default function HostSessionPage() {
     await updateSessionState(sessionId, {
       status: 'reveal',
     });
-    // Refresh leaderboard participants scores
+
+    // Allow the final score updates from the response submissions to land before
+    // we render the immediate question leaderboard. This avoids stale scores on
+    // the very first leaderboard shown after a correct answer in the final seconds.
+    await new Promise((resolve) => setTimeout(resolve, 250));
     const updatedParticipants = await getSessionParticipants(sessionId);
     setParticipants(updatedParticipants);
   };
