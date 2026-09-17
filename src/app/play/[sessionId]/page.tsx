@@ -207,6 +207,14 @@ export default function PlaySessionPage() {
       console.warn("Response submission failed; keeping local answer selection so the last-second click does not disappear.");
       sessionStorage.setItem(`bkm_ans_${sessionId}_${currentSlide.id}`, optionId);
     } else {
+      // Optimistically update the rating immediately so the score is visible in the
+      // leaderboard right after the question resolves, instead of waiting for a later
+      // participant refresh cycle to catch up.
+      setParticipants((prev) => prev.map((p) => {
+        if (p.id !== participantId) return p;
+        return { ...p, score: (p.score || 0) + points };
+      }));
+
       const refreshed = await getSession(sessionId);
       if (refreshed) {
         setParticipants(refreshed.participants);
