@@ -7,7 +7,7 @@ import { getSessionByCode, joinSession } from "@/lib/api";
 
 type Step = "code" | "name";
 
-const AVATARS = ["⚽", "🔥", "🦁", "⚡", "🏆", "🎯", "🚀", "👑"];
+const AVATARS = ["🐝", "🔥", "🦤", "⚡", "🏆", "🎯", "🚀", "👑"];
 
 function JoinPageInner() {
   const router = useRouter();

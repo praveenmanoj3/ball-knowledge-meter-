@@ -27,7 +27,7 @@ export default function PlaySessionPage() {
   const [participantId, setParticipantId] = useState<string | null>(null);
   const [participantReady, setParticipantReady] = useState(false);
   const [nickname, setNickname] = useState<string>("Player");
-  const [avatar, setAvatar] = useState<string>("⚽");
+  const [avatar, setAvatar] = useState<string>("🐝");
 
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -75,8 +75,8 @@ export default function PlaySessionPage() {
         (payload) => {
           const updatedSession = payload.new as Session;
           const previousSession = sessionRef.current;
-          const isNewSlide = previousSession?.current_slide_index !== updatedSession.current_slide_index;
-          const isNewLivePhase = previousSession?.status !== "live" && updatedSession.status === "live";
+          const isNewSlide = previousSession !== null && previousSession.current_slide_index !== updatedSession.current_slide_index;
+          const isNewLivePhase = previousSession !== null && previousSession.status !== "live" && updatedSession.status === "live";
           sessionRef.current = updatedSession;
           setSession(updatedSession);
 
@@ -107,6 +107,38 @@ export default function PlaySessionPage() {
   }, [sessionId]);
 
   const currentSlide = slides[session?.current_slide_index || 0] || slides[0];
+  const [nowMs, setNowMs] = useState(Date.now());
+
+  useEffect(() => {
+    if (session?.status !== "preview") return;
+    const interval = setInterval(() => setNowMs(Date.now()), 250);
+    return () => clearInterval(interval);
+  }, [session?.status]);
+
+  const previewCountdown =
+    session?.status === "preview" && currentSlide
+      ? Math.max(0, Math.ceil((currentSlide.preview_time ?? 5) - ((nowMs - new Date(session.phase_started_at).getTime()) / 1000)))
+      : 0;
+
+  useEffect(() => {
+    const currentIndex = session?.current_slide_index || 0;
+    const slidesToWarm = [slides[currentIndex], slides[currentIndex + 1]];
+    const links = slidesToWarm
+      .filter((slide) => slide?.media_url)
+      .map((slide) => {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.href = slide!.media_url;
+        link.as = slide!.media_type === 'video' ? 'video' : 'image';
+        link.setAttribute('data-bkm-media-preload', 'true');
+        document.head.appendChild(link);
+        return link;
+      });
+
+    return () => {
+      links.forEach((link) => link.remove());
+    };
+  }, [session?.current_slide_index, slides]);
 
   // Check if player already submitted an answer for current slide (persisted in sessionStorage)
   useEffect(() => {
@@ -406,10 +438,12 @@ export default function PlaySessionPage() {
           >
             <Eye size={36} color="#fff" />
             <h3 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: "1.5rem" }}>
-              LOOK AT THE SCREEN!
+              {session.current_slide_index === 0 ? `Starting quiz in ${previewCountdown}s` : "LOOK AT THE SCREEN!"}
             </h3>
             <p style={{ margin: 0, fontWeight: 700, fontSize: "0.95rem", color: "rgba(255,255,255,0.9)" }}>
-              Read the question & watch the media. Options will unlock in a few seconds…
+              {session.current_slide_index === 0
+                ? "Get ready. The first question is about to begin."
+                : "Read the question & watch the media. Options will unlock in a few seconds…"}
             </p>
           </div>
         ) : (

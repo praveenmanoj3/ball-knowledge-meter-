@@ -33,6 +33,39 @@ import { Slide } from "@/lib/types";
 
 type MediaType = "none" | "image" | "gif" | "video";
 
+async function compressImageFile(file: File): Promise<File> {
+  if (!file.type.startsWith("image/") || file.type === "image/gif" || file.type === "image/svg+xml") {
+    return file;
+  }
+
+  const objectUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = objectUrl;
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("Could not read image."));
+    });
+
+    const maxDimension = 1920;
+    const scale = Math.min(1, maxDimension / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob | null>((resolve) => {
+      canvas.toBlob(resolve, "image/webp", 0.82);
+    });
+    if (!blob || blob.size >= file.size) return file;
+
+    const fileName = file.name.replace(/\.[^.]+$/, "") + ".webp";
+    return new File([blob], fileName, { type: "image/webp", lastModified: Date.now() });
+  } finally {
+    URL.revokeObjectURL(objectUrl);
+  }
+}
+
 const OPTION_LABELS = ["A", "B", "C", "D"];
 const OPTION_COLORS = [
   "var(--color-brand-blue)",
@@ -178,9 +211,16 @@ function MediaUploadZone({
       return;
     }
 
-    const url = await uploadSlideMedia(presentationId, file);
+    let uploadFile = file;
+    try {
+      uploadFile = await compressImageFile(file);
+    } catch (error) {
+      console.warn("Image compression failed; uploading the original file:", error);
+    }
+
+    const url = await uploadSlideMedia(presentationId, uploadFile);
     if (url) {
-      const mediaType = detectMediaType(file);
+      const mediaType = detectMediaType(uploadFile);
       onUpdate({ media_url: url, media_type: mediaType });
     } else {
       setUploadError("Upload failed. Make sure 'slide-media' bucket exists in Supabase.");

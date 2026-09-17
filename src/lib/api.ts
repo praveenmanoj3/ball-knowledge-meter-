@@ -41,7 +41,11 @@ export async function uploadSlideMedia(
 
   const { error } = await supabase.storage
     .from(BUCKET)
-    .upload(path, file, { upsert: true, contentType: file.type });
+    .upload(path, file, {
+      upsert: true,
+      contentType: file.type,
+      cacheControl: '31536000',
+    });
 
   if (error) {
     console.error('Storage upload error:', error);
@@ -339,7 +343,7 @@ export async function updateSessionState(sessionId: string, updates: Partial<Ses
 // -------------------------------------------------------------
 // PARTICIPANTS & RESPONSES
 // -------------------------------------------------------------
-export async function joinSession(sessionId: string, nickname: string, avatar: string = '⚽'): Promise<Participant | null> {
+export async function joinSession(sessionId: string, nickname: string, avatar: string = '🐝'): Promise<Participant | null> {
   const { data, error } = await supabase
     .from('participants')
     .insert([{

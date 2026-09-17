@@ -275,7 +275,7 @@ export default function HostSessionPage() {
     if (simulating) return;
     setSimulating(true);
 
-    const avatars = ["⚽", "🔥", "🦁", "⚡", "🏆", "🎯", "🚀", "👑"];
+    const avatars = ["🐝", "🔥", "🦤", "⚡", "🏆", "🎯", "🚀", "👑"];
     const names = [
       "Alex", "Sam", "Leo", "Cristiano", "Kylian", "Erling", "Kevin", "Luka", "Jude", "Mohamed",
       "Neymar", "Pedri", "Bukayo", "Son", "Harry", "Virgil", "Alisson", "Lamine", "Rodri", "Vinicius"
@@ -419,7 +419,8 @@ export default function HostSessionPage() {
     setCurrentSlideIdx(slideIdx);
     setResponses([]);
 
-    const pTime = slide.preview_time !== undefined ? slide.preview_time : 5;
+    const isOpeningQuiz = slideIdx === 0 && phase === 'lobby';
+    const pTime = isOpeningQuiz ? 5 : (slide.preview_time !== undefined ? slide.preview_time : 5);
 
     if (pTime > 0) {
       setPhase('preview');
@@ -480,6 +481,26 @@ export default function HostSessionPage() {
   };
 
   const currentSlide = slides[currentSlideIdx] || slides[0];
+  const isOpeningCountdown = phase === 'preview' && currentSlideIdx === 0 && previewTimeLeft > 0;
+
+  useEffect(() => {
+    const slidesToWarm = [slides[currentSlideIdx], slides[currentSlideIdx + 1]];
+    const links = slidesToWarm
+      .filter((slide) => slide?.media_url)
+      .map((slide) => {
+        const link = document.createElement('link');
+        link.rel = 'preload';
+        link.href = slide!.media_url;
+        link.as = slide!.media_type === 'video' ? 'video' : 'image';
+        link.setAttribute('data-bkm-media-preload', 'true');
+        document.head.appendChild(link);
+        return link;
+      });
+
+    return () => {
+      links.forEach((link) => link.remove());
+    };
+  }, [currentSlideIdx, slides]);
 
   if (loading) {
     return (
@@ -636,7 +657,7 @@ export default function HostSessionPage() {
         <div className="brand"><div className="brand__mark" /><span className="brand__text">BKM</span></div>
 
         <div className="phase-badge" style={{ background: phase === 'preview' ? "var(--color-brand-blue)" : phase === 'live' ? "var(--color-brand-yellow)" : "var(--color-brand-green)", color: phase === 'preview' ? "#fff" : "#000" }}>
-          {phase === 'preview' ? 'QUESTION PREVIEW' : phase.toUpperCase()}
+          {isOpeningCountdown ? 'STARTING QUIZ' : phase === 'preview' ? 'QUESTION PREVIEW' : phase.toUpperCase()}
         </div>
 
         <div className="session-code" style={{ fontSize: "1.4rem", padding: "0.25rem 0.75rem" }}>
@@ -658,7 +679,7 @@ export default function HostSessionPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", background: "var(--color-brand-blue)", color: "#fff", padding: "0.55rem 1.2rem", borderRadius: 10, border: "2px solid #000", boxShadow: "var(--shadow-sm)" }}>
               <Eye size={20} />
               <span style={{ fontWeight: 800, fontSize: "1.05rem" }}>
-                Previewing Media & Question — Options unlock in {previewTimeLeft}s
+                {isOpeningCountdown ? `Starting quiz in ${previewTimeLeft}s` : `Previewing Media & Question — Options unlock in ${previewTimeLeft}s`}
               </span>
             </div>
           ) : (
