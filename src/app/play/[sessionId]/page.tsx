@@ -157,7 +157,14 @@ export default function PlaySessionPage() {
   }, [sessionId, session?.current_slide_index, currentSlide?.id]);
 
   const handleSelectAnswer = async (optionId: string) => {
-    if (!participantReady || isSubmitted || submittingAnswerRef.current || session?.status !== "live" || !session || !currentSlide || !participantId) return;
+    if (!participantReady || isSubmitted || submittingAnswerRef.current || !session || !currentSlide || !participantId) return;
+
+    const questionDeadlineMs = new Date(session.phase_started_at).getTime() + (currentSlide.time_limit || 20) * 1000;
+    const gracePeriodMs = 350;
+    const nowMs = Date.now();
+    const isWithinLiveWindow = session.status === "live" || nowMs <= questionDeadlineMs + gracePeriodMs;
+
+    if (!isWithinLiveWindow) return;
 
     submittingAnswerRef.current = true;
 
@@ -170,8 +177,7 @@ export default function PlaySessionPage() {
 
     // Calculate response time from server phase_started_at
     const startMs = new Date(session.phase_started_at).getTime();
-    const nowMs = Date.now();
-    const responseTimeMs = Math.max(0, nowMs - startMs);
+    const responseTimeMs = Math.max(0, Math.min(nowMs - startMs, (currentSlide.time_limit || 20) * 1000));
 
     // Speed bonus calculation: 1000 base pts + up to 500 speed bonus
     let points = 0;
