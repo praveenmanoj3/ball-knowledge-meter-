@@ -31,7 +31,6 @@ export default function PlaySessionPage() {
 
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isAnswerProcessing, setIsAnswerProcessing] = useState(false);
   const [earnedPoints, setEarnedPoints] = useState(0);
   const [isCorrectAnswer, setIsCorrectAnswer] = useState<boolean | null>(null);
   const submittingAnswerRef = useRef(false);
@@ -81,7 +80,8 @@ export default function PlaySessionPage() {
           sessionRef.current = updatedSession;
           setSession(updatedSession);
 
-          // Reset only when a new question becomes live, not on unrelated session writes.
+          // Reset only when a brand-new live question starts. A reveal or no-op state
+          // update should never wipe a selection that was just submitted on the current slide.
           if (updatedSession.status === "live" && (isNewSlide || isNewLivePhase)) {
             setSelectedOptionId(null);
             setIsSubmitted(false);
@@ -160,7 +160,6 @@ export default function PlaySessionPage() {
     if (!participantReady || isSubmitted || submittingAnswerRef.current || session?.status !== "live" || !session || !currentSlide || !participantId) return;
 
     submittingAnswerRef.current = true;
-    setIsAnswerProcessing(true);
 
     setSelectedOptionId(optionId);
     setIsSubmitted(true);
@@ -195,20 +194,13 @@ export default function PlaySessionPage() {
       points
     );
 
-    if (submitted) {
-      await new Promise((resolve) => setTimeout(resolve, 900));
-    }
-
     if (!submitted) {
-      const stillSameLiveQuestion = session?.status === "live" && session.current_slide_id === currentSlide.id;
-      if (stillSameLiveQuestion) {
-        sessionStorage.removeItem(`bkm_ans_${sessionId}_${currentSlide.id}`);
-        setSelectedOptionId(null);
-        setIsSubmitted(false);
-      }
+      // Keep the player’s choice visible even if the final-second roundtrip races
+      // with a reveal update or a slow Supabase response. Clearing it here causes the
+      // visible flicker users see when they answer in the last few seconds.
+      console.warn("Response submission failed; keeping local answer selection so the last-second click does not disappear.");
+      sessionStorage.setItem(`bkm_ans_${sessionId}_${currentSlide.id}`, optionId);
     }
-
-    setIsAnswerProcessing(false);
     submittingAnswerRef.current = false;
   };
 
@@ -466,7 +458,7 @@ export default function PlaySessionPage() {
                 style={{
                   padding: "0.75rem 1rem",
                   textAlign: "center",
-                  background: isAnswerProcessing ? "var(--color-surface-muted)" : "var(--color-brand-yellow)",
+                  background: "var(--color-brand-yellow)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -474,13 +466,9 @@ export default function PlaySessionPage() {
                   boxShadow: "var(--shadow-sm)",
                 }}
               >
-                {isAnswerProcessing ? (
-                  <Loader2 size={18} className="animate-spin" color="var(--color-text-strong)" />
-                ) : (
-                  <CheckCircle size={18} color="var(--color-text-strong)" />
-                )}
+                <CheckCircle size={18} color="var(--color-text-strong)" />
                 <span style={{ fontWeight: 800, fontSize: "0.95rem", color: "var(--color-text-strong)" }}>
-                  {isAnswerProcessing ? "Saving your answer…" : "Answer locked in! Waiting for host to reveal…"}
+                  Answer locked in! Waiting for host to reveal…
                 </span>
               </div>
             )}
