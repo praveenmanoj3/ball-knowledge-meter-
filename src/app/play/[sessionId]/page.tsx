@@ -194,9 +194,12 @@ export default function PlaySessionPage() {
     );
 
     if (!submitted) {
-      sessionStorage.removeItem(`bkm_ans_${sessionId}_${currentSlide.id}`);
-      setSelectedOptionId(null);
-      setIsSubmitted(false);
+      const stillSameLiveQuestion = session?.status === "live" && session.current_slide_id === currentSlide.id;
+      if (stillSameLiveQuestion) {
+        sessionStorage.removeItem(`bkm_ans_${sessionId}_${currentSlide.id}`);
+        setSelectedOptionId(null);
+        setIsSubmitted(false);
+      }
     }
     submittingAnswerRef.current = false;
   };
