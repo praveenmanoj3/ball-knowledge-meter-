@@ -52,14 +52,10 @@ function WaitingRoom({
   sessionCode,
   participants,
   onStart,
-  onSimulateBots,
-  simulating,
 }: {
   sessionCode: string;
   participants: Participant[];
   onStart: () => void;
-  onSimulateBots: () => void;
-  simulating: boolean;
 }) {
   const [copied, setCopied] = useState(false);
   const joinUrl = typeof window !== "undefined"
@@ -76,7 +72,7 @@ function WaitingRoom({
     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "80vh", gap: "2rem", padding: "2rem" }}>
       <div style={{ textAlign: "center" }}>
         <p style={{ margin: "0 0 0.5rem", fontSize: "0.78rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", color: "var(--color-text-muted)" }}>
-          Live 200-Player Session — Supabase Realtime
+          Live Session — Supabase Realtime
         </p>
         <h1 style={{ margin: 0, fontFamily: "var(--font-display)", fontSize: "clamp(2rem, 5vw, 3.5rem)", color: "var(--color-text-strong)" }}>
           Join the Arena
@@ -141,16 +137,6 @@ function WaitingRoom({
 
       {/* Action Buttons */}
       <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap", justifyContent: "center" }}>
-        <button
-          className="btn btn-yellow"
-          style={{ fontSize: "1.1rem", padding: "1.1rem 2rem" }}
-          onClick={onSimulateBots}
-          disabled={simulating}
-        >
-          {simulating ? <Loader2 size={18} className="animate-spin" /> : "🤖"}
-          {simulating ? "Joining 200 Bots..." : "Simulate 200 Players"}
-        </button>
-
         <button className="btn btn-green" style={{ fontSize: "1.1rem", padding: "1.1rem 2.5rem" }} onClick={onStart}>
           <Zap size={18} />
           Start Presentation ({participants.length} Ready)
@@ -174,16 +160,6 @@ export default function HostSessionPage() {
   const [phase, setPhase] = useState<'lobby' | 'preview' | 'live' | 'reveal' | 'leaderboard' | 'ended'>('lobby');
   const [timeLeft, setTimeLeft] = useState(0);
   const [previewTimeLeft, setPreviewTimeLeft] = useState(0);
-  const [simulating, setSimulating] = useState(false);
-
-  const insertParticipantBatch = async (batch: Array<{ session_id: string; nickname: string; avatar: string; score: number }>) => {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      const { error } = await supabase.from("participants").insert(batch);
-      if (!error) return;
-      if (attempt === 3) throw error;
-      await new Promise((resolve) => setTimeout(resolve, attempt * 300));
-    }
-  };
 
   // Load initial session
   useEffect(() => {
@@ -283,134 +259,6 @@ export default function HostSessionPage() {
     return () => clearInterval(timer);
   }, [phase, timeLeft]);
 
-  const handleSimulate200Players = async () => {
-    if (simulating) return;
-    setSimulating(true);
-
-    const avatars = ["🐝", "🔥", "🦤", "⚡", "🏆", "🎯", "🚀", "👑"];
-    const names = [
-      "Alex", "Sam", "Leo", "Cristiano", "Kylian", "Erling", "Kevin", "Luka", "Jude", "Mohamed",
-      "Neymar", "Pedri", "Bukayo", "Son", "Harry", "Virgil", "Alisson", "Lamine", "Rodri", "Vinicius"
-    ];
-
-    const totalToJoin = 200;
-    const batchSize = 25;
-
-    try {
-      for (let i = 0; i < totalToJoin; i += batchSize) {
-      const batch = Array.from({ length: Math.min(batchSize, totalToJoin - i) }, (_, idx) => {
-        const pNum = i + idx + 1;
-        const randomName = names[pNum % names.length];
-        return {
-          session_id: sessionId,
-          nickname: `${randomName}_${pNum}`,
-          avatar: avatars[pNum % avatars.length],
-          score: 0,
-        };
-      });
-
-        await insertParticipantBatch(batch);
-      }
-
-      const updatedParticipants = await getSessionParticipants(sessionId);
-      setParticipants(updatedParticipants);
-      if (updatedParticipants.length < totalToJoin) {
-        throw new Error(`Only ${updatedParticipants.length} participants are visible after the simulation.`);
-      }
-    } catch (error) {
-      console.error("Participant simulation failed:", error);
-      alert(error instanceof Error ? error.message : "Participant simulation failed. Please try again.");
-    } finally {
-      setSimulating(false);
-    }
-  };
-
-  const simulateBotAnswersForCurrentSlide = async () => {
-    const slide = slides[currentSlideIdx] || slides[0];
-    if (!slide) return;
-
-    const currentSlideResponses = await getSlideResponses(sessionId, slide.id);
-    const answeredIds = new Set(currentSlideResponses.map((r) => r.participant_id));
-    const unanswered = participants.filter((p) => !answeredIds.has(p.id));
-
-    if (!unanswered.length) return;
-
-    const opts = slide.options || [];
-    if (!opts.length) return;
-
-    // ── Real timing window: spread across the actual question time limit ──
-    const timeLimitMs = (slide.time_limit || 20) * 1000;
-
-    // ── Build per-bot delays: 90% unique ms, 10% genuine collisions ──
-    const usedDelays: number[] = [];
-    const delays: number[] = unanswered.map((_, idx) => {
-      // First bot always gets a unique delay so usedDelays is never empty
-      const canCollide = idx > 0 && Math.random() < 0.10;
-      if (canCollide) {
-        // Genuinely share a delay — this bot's DB insert will fire at the
-        // exact same real-world millisecond as the bot it collides with.
-        return usedDelays[Math.floor(Math.random() * usedDelays.length)];
-      }
-      // Unique delay: 300ms → timeLimitMs, guaranteed distinct
-      let delay: number;
-      let attempts = 0;
-      do {
-        // Weight toward earlier responses (feels more human)
-        const t = Math.random();
-        delay = Math.floor(300 + (t * t * 0.6 + Math.random() * 0.4) * (timeLimitMs - 300));
-        attempts++;
-      } while (usedDelays.includes(delay) && attempts < 100);
-      usedDelays.push(delay);
-      return delay;
-    });
-
-    // ── Fire each bot's DB insert at their real scheduled delay ──
-    // Bots with the same delay truly race to the DB at the same ms.
-    const botPromises = unanswered.map((player, idx) => {
-      return new Promise<void>((resolve) => {
-        setTimeout(async () => {
-          const isCorrect = Math.random() < 0.62; // ~62% get it right
-          const correctOpts = opts.filter((o: any) => o.is_correct);
-          const wrongOpts = opts.filter((o: any) => !o.is_correct);
-          const chosenOpt = isCorrect
-            ? (correctOpts[Math.floor(Math.random() * correctOpts.length)] ?? opts[0])
-            : (wrongOpts[Math.floor(Math.random() * wrongOpts.length)] ?? opts[0]);
-
-          const responseTimeMs = delays[idx];
-          // Faster answer → more points (mirrors the real scoring formula)
-          const speedRatio = Math.max(0, 1 - responseTimeMs / timeLimitMs);
-          const pointsAwarded = isCorrect ? Math.round(500 + speedRatio * 500) : 0;
-
-          // Actual DB write at this real-world millisecond
-          await supabase.from("responses").insert([{
-            session_id: sessionId,
-            slide_id: slide.id,
-            participant_id: player.id,
-            selected_option_id: chosenOpt?.id ?? null,
-            is_correct: isCorrect,
-            response_time_ms: responseTimeMs,   // = real elapsed time
-            points_awarded: pointsAwarded,
-          }]);
-
-          if (pointsAwarded > 0) {
-            await supabase
-              .from("participants")
-              .update({ score: (player.score || 0) + pointsAwarded })
-              .eq("id", player.id);
-          }
-
-          resolve();
-        }, delays[idx]); // ← actual setTimeout delay — not faked
-      });
-    });
-
-    // Wait for the slowest bot (≤ time_limit seconds)
-    await Promise.all(botPromises);
-
-    const updatedResp = await getSlideResponses(sessionId, slide.id);
-    setResponses(updatedResp);
-  };
-
   const handleUnlockOptions = async () => {
     const slide = slides[currentSlideIdx] || slides[0];
     setPhase('live');
@@ -421,8 +269,6 @@ export default function HostSessionPage() {
       status: 'live',
       phase_started_at: new Date().toISOString(),
     });
-
-    simulateBotAnswersForCurrentSlide();
   };
 
   const startSlidePhase = async (slideIdx: number) => {
@@ -452,7 +298,6 @@ export default function HostSessionPage() {
         current_slide_index: slideIdx,
         phase_started_at: new Date().toISOString(),
       });
-      simulateBotAnswersForCurrentSlide();
     }
   };
 
@@ -564,8 +409,6 @@ export default function HostSessionPage() {
           sessionCode={session.session_code}
           participants={participants}
           onStart={handleStartSession}
-          onSimulateBots={handleSimulate200Players}
-          simulating={simulating}
         />
       </div>
     );
@@ -807,14 +650,9 @@ export default function HostSessionPage() {
             </button>
           )}
           {phase === 'live' && (
-            <>
-              <button className="btn btn-secondary" onClick={simulateBotAnswersForCurrentSlide}>
-                🤖 Auto-Fill 200 Votes
-              </button>
-              <button className="btn btn-yellow" onClick={handleRevealAnswer}>
-                Reveal Answers
-              </button>
-            </>
+            <button className="btn btn-yellow" onClick={handleRevealAnswer}>
+              Reveal Answers
+            </button>
           )}
           {phase === 'reveal' && (
             <button className="btn btn-green" onClick={handleShowLeaderboard}>
