@@ -1,17 +1,26 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Lock, Unlock, ArrowRight, Delete, ShieldAlert } from "lucide-react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { Lock, Unlock, Delete, ShieldAlert, ArrowRight, Zap } from "lucide-react";
 
 const REQUIRED_PIN = "2319";
 const STORAGE_KEY = "bkm_app_unlocked";
 
 export default function PinLockGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const [isUnlocked, setIsUnlocked] = useState<boolean | null>(null);
   const [pin, setPin] = useState<string>("");
   const [error, setError] = useState<boolean>(false);
   const [success, setSuccess] = useState<boolean>(false);
   const hiddenInputRef = useRef<HTMLInputElement>(null);
+
+  // Participant routes bypass the PIN lock completely
+  const isParticipantRoute =
+    pathname?.startsWith("/join") ||
+    pathname?.startsWith("/play") ||
+    pathname?.startsWith("/leaderboard");
 
   useEffect(() => {
     // Check if user is already authenticated
@@ -24,10 +33,15 @@ export default function PinLockGate({ children }: { children: React.ReactNode })
   }, []);
 
   useEffect(() => {
-    if (isUnlocked === false) {
+    if (!isParticipantRoute && isUnlocked === false) {
       hiddenInputRef.current?.focus();
     }
-  }, [isUnlocked]);
+  }, [isUnlocked, isParticipantRoute]);
+
+  // If on player/participant route, render directly without lock
+  if (isParticipantRoute) {
+    return <>{children}</>;
+  }
 
   const handleDigit = (digit: string) => {
     if (success || pin.length >= 4) return;
@@ -85,7 +99,7 @@ export default function PinLockGate({ children }: { children: React.ReactNode })
     }
   };
 
-  // Prevent flash while checking localStorage
+  // Prevent flash while checking localStorage on admin routes
   if (isUnlocked === null) {
     return (
       <div
@@ -206,7 +220,7 @@ export default function PinLockGate({ children }: { children: React.ReactNode })
               textAlign: "center",
             }}
           >
-            {success ? "Access Granted" : "Restricted Access"}
+            {success ? "Admin Unlocked" : "Host Workspace Locked"}
           </h2>
 
           <p
@@ -221,8 +235,8 @@ export default function PinLockGate({ children }: { children: React.ReactNode })
             {error
               ? "Incorrect PIN. Please try again."
               : success
-              ? "Opening BallKnowledgeMeter..."
-              : "Enter 4-digit PIN to unlock"}
+              ? "Opening Host Workspace..."
+              : "Enter 4-digit PIN to access Admin Dashboard"}
           </p>
         </div>
 
@@ -353,6 +367,31 @@ export default function PinLockGate({ children }: { children: React.ReactNode })
           >
             <Delete size={18} />
           </button>
+        </div>
+
+        {/* Direct Link for Participants */}
+        <div
+          style={{
+            borderTop: "1px dashed var(--color-border)",
+            paddingTop: "0.85rem",
+            width: "100%",
+            textAlign: "center",
+          }}
+        >
+          <Link
+            href="/join"
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.35rem",
+              fontSize: "0.82rem",
+              fontWeight: 800,
+              color: "var(--color-brand-blue-dark)",
+              textDecoration: "underline",
+            }}
+          >
+            <Zap size={14} /> Joining as a player? Click here to Join directly →
+          </Link>
         </div>
       </div>
     </div>
