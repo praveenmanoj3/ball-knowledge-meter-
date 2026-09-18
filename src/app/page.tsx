@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import {
   LayoutDashboard,
@@ -14,6 +14,10 @@ import {
   Trophy,
   Zap,
   Loader2,
+  Lock,
+  KeyRound,
+  X,
+  ShieldAlert,
 } from "lucide-react";
 import {
   getPresentations,
@@ -23,6 +27,264 @@ import {
   seedSampleQuizIfEmpty,
 } from "@/lib/api";
 import { Presentation } from "@/lib/types";
+
+const SECURITY_PIN = "2319";
+
+// ── PIN Verification Modal ─────────────────────────────
+function PinVerificationModal({
+  isOpen,
+  actionType,
+  presentation,
+  onSuccess,
+  onClose,
+}: {
+  isOpen: boolean;
+  actionType: "open" | "delete";
+  presentation: Presentation | null;
+  onSuccess: () => void;
+  onClose: () => void;
+}) {
+  const [digits, setDigits] = useState<string[]>(["", "", "", ""]);
+  const [error, setError] = useState(false);
+  const [shaking, setShaking] = useState(false);
+  const inputRefs = [
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+    useRef<HTMLInputElement>(null),
+  ];
+
+  useEffect(() => {
+    if (isOpen) {
+      setDigits(["", "", "", ""]);
+      setError(false);
+      setTimeout(() => {
+        inputRefs[0].current?.focus();
+      }, 50);
+    }
+  }, [isOpen]);
+
+  if (!isOpen || !presentation) return null;
+
+  const handleDigitChange = (index: number, value: string) => {
+    // Handle pasting 4-digit string
+    if (value.length > 1) {
+      const clean = value.replace(/\D/g, "").slice(0, 4);
+      if (clean.length > 0) {
+        const nextDigits = ["", "", "", ""];
+        clean.split("").forEach((ch, idx) => {
+          if (idx < 4) nextDigits[idx] = ch;
+        });
+        setDigits(nextDigits);
+        setError(false);
+        if (clean.length === 4) {
+          if (clean === SECURITY_PIN) {
+            onSuccess();
+          } else {
+            triggerError();
+          }
+        } else {
+          const nextIdx = Math.min(clean.length, 3);
+          inputRefs[nextIdx].current?.focus();
+        }
+        return;
+      }
+    }
+
+    const char = value.slice(-1).replace(/\D/g, "");
+    const nextDigits = [...digits];
+    nextDigits[index] = char;
+    setDigits(nextDigits);
+    setError(false);
+
+    if (char && index < 3) {
+      inputRefs[index + 1].current?.focus();
+    }
+
+    // Auto verify when 4th digit entered
+    if (char && index === 3) {
+      const fullPin = nextDigits.join("");
+      if (fullPin === SECURITY_PIN) {
+        onSuccess();
+      } else {
+        triggerError();
+      }
+    }
+  };
+
+  const handleKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Backspace" && !digits[index] && index > 0) {
+      inputRefs[index - 1].current?.focus();
+    } else if (e.key === "Escape") {
+      onClose();
+    } else if (e.key === "Enter") {
+      handleManualSubmit();
+    }
+  };
+
+  const triggerError = () => {
+    setError(true);
+    setShaking(true);
+    setTimeout(() => setShaking(false), 500);
+    setDigits(["", "", "", ""]);
+    setTimeout(() => {
+      inputRefs[0].current?.focus();
+    }, 100);
+  };
+
+  const handleManualSubmit = () => {
+    const fullPin = digits.join("");
+    if (fullPin === SECURITY_PIN) {
+      onSuccess();
+    } else {
+      triggerError();
+    }
+  };
+
+  const isDelete = actionType === "delete";
+
+  return (
+    <div
+      style={{
+        position: "fixed",
+        inset: 0,
+        backgroundColor: "rgba(18, 16, 15, 0.75)",
+        backdropFilter: "blur(4px)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "1rem",
+        zIndex: 100,
+      }}
+      onClick={onClose}
+    >
+      <div
+        className="pin-card animate-scale-in"
+        style={{
+          width: "100%",
+          maxWidth: 440,
+          padding: "2rem",
+          background: "var(--color-surface)",
+          boxShadow: "10px 10px 0 0 var(--color-shadow)",
+          borderRadius: 14,
+          transform: shaking ? "translateX(-6px)" : "none",
+          transition: "transform 0.08s ease-in-out",
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.2rem" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <div
+              style={{
+                width: 36,
+                height: 36,
+                borderRadius: 8,
+                background: isDelete ? "var(--color-brand-pink)" : "var(--color-brand-yellow)",
+                border: "var(--border-default)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "var(--shadow-sm)",
+              }}
+            >
+              {isDelete ? <ShieldAlert size={18} color="#fff" /> : <Lock size={18} />}
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: 800, color: "var(--color-text-strong)" }}>
+                {isDelete ? "Security Check: Delete" : "Security Check: Open"}
+              </h3>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 4, color: "var(--color-text-muted)" }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Prompt description */}
+        <p style={{ margin: "0 0 1.5rem", fontSize: "0.92rem", color: "var(--color-text)", lineHeight: 1.45 }}>
+          Enter the 4-digit host PIN to {isDelete ? <strong style={{ color: "#dc2626" }}>permanently delete</strong> : <strong>open & edit</strong>}{" "}
+          &ldquo;<strong>{presentation.title}</strong>&rdquo;.
+        </p>
+
+        {/* 4 Digit Boxes */}
+        <div style={{ display: "flex", justifyContent: "center", gap: "0.75rem", marginBottom: "1.2rem" }}>
+          {digits.map((digit, idx) => (
+            <input
+              key={idx}
+              ref={inputRefs[idx]}
+              type="password"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={4}
+              value={digit}
+              onChange={(e) => handleDigitChange(idx, e.target.value)}
+              onKeyDown={(e) => handleKeyDown(idx, e)}
+              style={{
+                width: "58px",
+                height: "64px",
+                fontSize: "2rem",
+                textAlign: "center",
+                fontFamily: "var(--font-display)",
+                fontWeight: 800,
+                border: error ? "3px solid #dc2626" : "var(--border-default)",
+                borderRadius: 10,
+                background: error ? "#fef2f2" : "var(--color-surface-soft)",
+                boxShadow: error ? "0 0 0 2px rgba(220,38,38,0.2)" : "var(--shadow-sm)",
+                color: "var(--color-text-strong)",
+                outline: "none",
+              }}
+            />
+          ))}
+        </div>
+
+        {/* Error message */}
+        {error && (
+          <p
+            style={{
+              margin: "0 0 1.2rem",
+              textAlign: "center",
+              fontSize: "0.85rem",
+              fontWeight: 800,
+              color: "#dc2626",
+            }}
+          >
+            ❌ Incorrect PIN code. Please try again.
+          </p>
+        )}
+
+        {/* Action Buttons */}
+        <div style={{ display: "flex", gap: "0.8rem", marginTop: "1.5rem" }}>
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+            style={{ flex: 1 }}
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            className={isDelete ? "btn btn-secondary" : "btn btn-primary"}
+            onClick={handleManualSubmit}
+            style={{
+              flex: 1.3,
+              background: isDelete ? "#dc2626" : undefined,
+              color: isDelete ? "#fff" : undefined,
+              borderColor: isDelete ? "#991b1b" : undefined,
+            }}
+          >
+            <KeyRound size={16} />
+            Verify PIN
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ── Sidebar ────────────────────────────────────────────
 function Sidebar({ active }: { active: string }) {
@@ -106,12 +368,14 @@ function Sidebar({ active }: { active: string }) {
 // ── Presentation Card ──────────────────────────────────
 function PresentationCard({
   pres,
+  onOpen,
   onDelete,
   onStart,
   starting,
 }: {
   pres: Presentation;
-  onDelete: (id: string) => void;
+  onOpen: (pres: Presentation) => void;
+  onDelete: (pres: Presentation) => void;
   onStart: (id: string) => void;
   starting: boolean;
 }) {
@@ -135,7 +399,7 @@ function PresentationCard({
           marginBottom: "1rem",
         }}
       >
-        <div>
+        <div style={{ cursor: "pointer" }} onClick={() => onOpen(pres)}>
           <h3
             style={{
               margin: 0,
@@ -203,13 +467,19 @@ function PresentationCard({
           {starting ? <Loader2 size={14} className="animate-spin" /> : <Play size={14} />}
           Start Live
         </button>
-        <Link href={`/editor/${pres.id}`} className="btn btn-secondary" style={{ padding: "0.85rem 1rem" }}>
+        <button
+          onClick={() => onOpen(pres)}
+          className="btn btn-secondary"
+          style={{ padding: "0.85rem 1rem" }}
+          title="Open / Edit Presentation (PIN Required)"
+        >
           <Pencil size={14} />
-        </Link>
+        </button>
         <button
           className="btn btn-secondary"
           style={{ padding: "0.85rem 1rem" }}
-          onClick={() => onDelete(pres.id)}
+          onClick={() => onDelete(pres)}
+          title="Delete Presentation (PIN Required)"
         >
           <Trash2 size={14} />
         </button>
@@ -225,6 +495,17 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [startingId, setStartingId] = useState<string | null>(null);
+
+  // PIN security state
+  const [pinModal, setPinModal] = useState<{
+    isOpen: boolean;
+    actionType: "open" | "delete";
+    presentation: Presentation | null;
+  }>({
+    isOpen: false,
+    actionType: "open",
+    presentation: null,
+  });
 
   useEffect(() => {
     async function initData() {
@@ -262,11 +543,39 @@ export default function DashboardPage() {
     }
   }
 
-  async function handleDelete(id: string) {
-    if (confirm("Delete this presentation?")) {
-      await deletePresentation(id);
-      setPresentations((p) => p.filter((x) => x.id !== id));
+  function handleRequestOpen(pres: Presentation) {
+    setPinModal({
+      isOpen: true,
+      actionType: "open",
+      presentation: pres,
+    });
+  }
+
+  function handleRequestDelete(pres: Presentation) {
+    setPinModal({
+      isOpen: true,
+      actionType: "delete",
+      presentation: pres,
+    });
+  }
+
+  async function handlePinSuccess() {
+    if (!pinModal.presentation) return;
+    const pres = pinModal.presentation;
+    const action = pinModal.actionType;
+
+    setPinModal({ isOpen: false, actionType: "open", presentation: null });
+
+    if (action === "open") {
+      router.push(`/editor/${pres.id}`);
+    } else if (action === "delete") {
+      await deletePresentation(pres.id);
+      setPresentations((prev) => prev.filter((x) => x.id !== pres.id));
     }
+  }
+
+  function handleClosePinModal() {
+    setPinModal({ isOpen: false, actionType: "open", presentation: null });
   }
 
   return (
@@ -355,7 +664,8 @@ export default function DashboardPage() {
               <PresentationCard
                 key={pres.id}
                 pres={pres}
-                onDelete={handleDelete}
+                onOpen={handleRequestOpen}
+                onDelete={handleRequestDelete}
                 onStart={handleStart}
                 starting={startingId === pres.id}
               />
@@ -363,6 +673,15 @@ export default function DashboardPage() {
           </div>
         )}
       </main>
+
+      {/* PIN Verification Security Modal */}
+      <PinVerificationModal
+        isOpen={pinModal.isOpen}
+        actionType={pinModal.actionType}
+        presentation={pinModal.presentation}
+        onSuccess={handlePinSuccess}
+        onClose={handleClosePinModal}
+      />
     </div>
   );
 }
