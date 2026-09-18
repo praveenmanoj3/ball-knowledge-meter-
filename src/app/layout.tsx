@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import PinLockGate from "@/components/PinLockGate";
 
 export const metadata: Metadata = {
   title: "BallKnowledgeMeter — Live Quiz Platform",
@@ -13,7 +14,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <PinLockGate>{children}</PinLockGate>
+      </body>
     </html>
   );
 }
